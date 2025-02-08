@@ -1,10 +1,14 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class PlayerHealthHandler : MonoBehaviour
 {
+    private Vector3 respawnPosition; // Vị trí respawn mặc định cho nhân vật
+
+    [SerializeField]
+    private GameObject playerPrefab;  // Gán Prefab của nhân vật trong Inspector
     [SerializeField]
     public int PlayerMaxHealth;
     [SerializeField]
@@ -20,6 +24,9 @@ public class PlayerHealthHandler : MonoBehaviour
 
     public GameObject DeathParticle;
 
+    private ConstantForce constantForce;  // Thêm biến ConstantForce
+    private Rigidbody rb;  // Thêm Rigidbody để đảm bảo nhân vật có thể quay
+
     Respawner spawner;
 
     private bool hasRespawned = false;
@@ -27,8 +34,7 @@ public class PlayerHealthHandler : MonoBehaviour
     void Start()
     {
         _PlayerController = GetComponent<PlayerController>();
-        spawner = GameObject.FindGameObjectWithTag("Respawn").
-            GetComponent<Respawner>();
+        spawner = GameObject.FindGameObjectWithTag("Respawn").GetComponent<Respawner>();
         spawner.SetPosition(transform.position);
 
         HeartPanel = GameObject.Find("HeartPanel").transform;
@@ -40,7 +46,20 @@ public class PlayerHealthHandler : MonoBehaviour
         }
 
         PlayerCurrentHealth = PlayerMaxHealth;
-       // LoadPlayerHealth();
+
+        // Lấy lại component ConstantForce và Rigidbody khi game bắt đầu hoặc hồi sinh
+        constantForce = GetComponent<ConstantForce>();
+        if (constantForce == null)
+        {
+            constantForce = gameObject.AddComponent<ConstantForce>();  // Thêm lại nếu bị mất
+        }
+
+        rb = GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = gameObject.AddComponent<Rigidbody>();  // Thêm lại nếu bị mất
+            rb.useGravity = false;  // Tắt gravity nếu không muốn bị rơi
+        }
     }
 
     void Update()
@@ -48,7 +67,7 @@ public class PlayerHealthHandler : MonoBehaviour
         if (PlayerCurrentHealth <= 0)
         {
             print("Player is dead!");
-            spawner.playerIsDead();
+            spawner.PlayerIsDead();
             Instantiate(DeathParticle, transform.position, transform.rotation);
             Destroy(gameObject);
         }
@@ -93,7 +112,27 @@ public class PlayerHealthHandler : MonoBehaviour
         _PlayerController.controller.Move(-push);
         _PlayerController.flashRed();
 
+        // Thêm lực xoay khi mất máu
+        if (constantForce != null)
+        {
+            constantForce.torque = new Vector3(0, 500f, 0);  // Nhân vật quay quanh trục Y
+            StartCoroutine(StopSpinningAfterDelay(1f));   // Dừng quay sau 1 giây
+        }
+        else
+        {
+            Debug.LogError("ConstantForce không tồn tại!");
+        }
+
         SavePlayerHealth();
+    }
+    IEnumerator StopSpinningAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+
+        if (constantForce != null)
+        {
+            constantForce.torque = Vector3.zero;  // Dừng quay
+        }
     }
 
     public void ResetHealth()
@@ -133,6 +172,35 @@ public class PlayerHealthHandler : MonoBehaviour
         // Load player health from PlayerPrefs
         PlayerMaxHealth = PlayerPrefs.GetInt("PlayerMaxHealth", PlayerMaxHealth);
         PlayerCurrentHealth = PlayerPrefs.GetInt("PlayerCurrentHealth", PlayerMaxHealth);
+    }
+    public void RespawnReset()
+    {
+        // Reset lại sức khỏe và các trạng thái quay của nhân vật
+        PlayerCurrentHealth = PlayerMaxHealth;
+        UpdateHearts();
+
+        // Đảm bảo ConstantForce được reset sau khi hồi sinh
+        ConstantForce constantForce = GetComponent<ConstantForce>();
+        if (constantForce != null)
+        {
+            constantForce.torque = Vector3.zero;  // Reset quay
+        }
+    }
+    public void playerIsDead()
+    {
+        // Hồi sinh nhân vật sau 3 giây
+        StartCoroutine(RespawnPlayer());
+    }
+
+    IEnumerator RespawnPlayer()
+    {
+        yield return new WaitForSeconds(3f);
+
+        // Tạo lại nhân vật tại vị trí hồi sinh
+        GameObject player = Instantiate(playerPrefab, respawnPosition, Quaternion.identity);
+
+        // Reset lại trạng thái nhân vật sau khi hồi sinh
+        player.GetComponent<PlayerHealthHandler>().RespawnReset();
     }
 }
 

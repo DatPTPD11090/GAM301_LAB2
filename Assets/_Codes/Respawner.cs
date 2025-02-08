@@ -1,61 +1,66 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Respawner : MonoBehaviour
 {
-    // Start is called before the first frame update
     [SerializeField]
-    GameObject PlayerToSpawn;
-    Vector3 respawnPosition;
-    Transform HeartPanel;
+    private GameObject PlayerToSpawn;
+    private Vector3 respawnPosition;
+    private Transform HeartPanel;
 
-    public AnimationHandler anim;
-
-    public AudioClip deathSound; // Assign the death sound AudioClip in the Inspector
-
+    public AudioClip deathSound;
     public AudioSource deathAudioSource;
-
 
     private void Start()
     {
+
         HeartPanel = GameObject.Find("HeartPanel").transform;
+
+
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 60;
     }
 
-    public void SetPosition(Vector3 newPost) 
+
+    public void SetPosition(Vector3 newPosition)
     {
-        respawnPosition = newPost;
+        respawnPosition = newPosition;
     }
 
-    void respawn() 
+    // Hàm hồi sinh nhân vật
+    private void Respawn()
     {
-        foreach(Transform child in HeartPanel) 
+
+        foreach (Transform child in HeartPanel)
         {
             Destroy(child.gameObject);
         }
-        // Instantiate(PlayerToSpawn, respawnPosition, Quaternion.identity);
+
+
         GameObject newPlayer = Instantiate(PlayerToSpawn, respawnPosition, Quaternion.identity);
 
-        // Get the AnimationHandler component from the new player object
+        // Lấy các component từ nhân vật mới
         AnimationHandler newPlayerAnim = newPlayer.GetComponent<AnimationHandler>();
+        PlayerHealthHandler newHealthHandler = newPlayer.GetComponent<PlayerHealthHandler>();
 
-        // Assign the src variable to the AnimationHandler component
-        if (newPlayerAnim != null)
-        {
-            newPlayerAnim.src = anim.src;
-        }
+        // Reset âm thanh và các hiệu ứng nếu cần
         if (deathAudioSource != null && deathSound != null)
         {
             deathAudioSource.clip = deathSound;
             deathAudioSource.Play();
         }
 
-        // Restart sound
-        anim.RestartSound();
+        // Đảm bảo sau khi hồi sinh, nhân vật vẫn bị quay khi mất máu
+        if (newHealthHandler != null)
+        {
+            newHealthHandler.RespawnReset();  // Gọi hàm reset trong PlayerHealthHandler để reset trạng thái
+        }
     }
 
-    public void playerIsDead() 
+    // Hàm gọi khi nhân vật chết
+    public void PlayerIsDead()
     {
-        Invoke("respawn", 1);
+        Invoke("Respawn", 1);  // Gọi hàm hồi sinh sau 1 giây
     }
 }

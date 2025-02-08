@@ -27,7 +27,6 @@ public class PlayerController : MonoBehaviour
 
     public float maxSlopeAngle = 120f;
     public float slideSpeed = 3.0f;
-    
 
     // Start is called before the first frame update
     private void Start()
@@ -48,7 +47,6 @@ public class PlayerController : MonoBehaviour
             {
                 Debug.LogError("AudioSource component with tag 'swordSrc' not found!");
             }
-            Application.targetFrameRate = 60;
         }
     }
 
@@ -56,40 +54,40 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         groundedPlayer = controller.isGrounded;
-        if (groundedPlayer) 
+        if (groundedPlayer)
         {
             GroundTimer = 0.2f;
         }
 
-        if (GroundTimer > 0) 
+        if (GroundTimer > 0)
         {
             GroundTimer -= Time.deltaTime;
             handler.Landed();
         }
-        else 
+        else
         {
             handler.AirBorn();
         }
 
-        if(groundedPlayer && playerVelocity.y < 0) 
+        if (groundedPlayer && playerVelocity.y < 0)
         {
             playerVelocity.y = 0f;
         }
         Vector3 move = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
         controller.Move(move * Time.deltaTime * playerSpeed);
 
-        if(move != Vector3.zero) 
+        if (move != Vector3.zero)
         {
             handler.Run();
             gameObject.transform.forward = move;
-        } 
-        else 
+        }
+        else
         {
             handler.Idle();
         }
-        if(Input.GetButtonDown("Jump")) 
+        if (Input.GetButtonDown("Jump"))
         {
-            if(GroundTimer > 0) 
+            if (GroundTimer > 0)
             {
                 GroundTimer = 0;
                 handler.Jump();
@@ -97,24 +95,23 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if(Input.GetMouseButtonDown(0)) 
+        if (Input.GetMouseButtonDown(0))
         {
             handler.Attack();
         }
         playerVelocity.y += gravityValue * Time.deltaTime;
         controller.Move(playerVelocity * Time.deltaTime);
     }
-    public void flashRed() 
+    public void flashRed()
     {
         _skin.material.SetVector("_EmissionColor", flashColor * intensity);
         Invoke("normal", 0.12f);
-
         if (audioSource != null && flashSound != null)
         {
             audioSource.PlayOneShot(flashSound);
         }
     }
-    void normal() 
+    void normal()
     {
         _skin.material.SetVector("_EmissionColor", normalColor);
     }
@@ -130,3 +127,4 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 }
+
